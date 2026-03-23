@@ -1,25 +1,56 @@
+const SUPABASE_URL = 'https://hbitsxaeonshucmvidkv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhiaXRzeGFlb25zaHVjbXZpZGt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNTIxMTMsImV4cCI6MjA4OTgyODExM30.f03W2uuKWuOV4dWQbhnClzjXIyqp_U5N3lx7vTwaa8U';
+
+const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+};
+
 const input = document.getElementById('todoInput');
 const addBtn = document.getElementById('addBtn');
 const list = document.getElementById('todoList');
 
-function loadTodos() {
-    const todos = JSON.parse(localStorage.getItem('todos') || '[]');
-    todos.forEach(todo => addTodoToDOM(todo.text, todo.done));
+async function loadTodos() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/todos?order=created_at.asc`, { headers });
+    const todos = await res.json();
+    list.innerHTML = '';
+    todos.forEach(todo => addTodoToDOM(todo.id, todo.text, todo.done));
 }
 
-function saveTodos() {
-    const todos = [];
-    list.querySelectorAll('li').forEach(li => {
-        const span = li.querySelector('span');
-        const editInput = li.querySelector('.edit-input');
-        const text = span ? span.textContent : editInput ? editInput.value : '';
-        todos.push({ text, done: li.classList.contains('done') });
+async function addTodo() {
+    const text = input.value.trim();
+    if (!text) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ text, done: false })
     });
-    localStorage.setItem('todos', JSON.stringify(todos));
+    const [todo] = await res.json();
+    addTodoToDOM(todo.id, todo.text, todo.done);
+    input.value = '';
+    input.focus();
 }
 
-function addTodoToDOM(text, done = false) {
+async function updateTodo(id, data) {
+    await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(data)
+    });
+}
+
+async function deleteTodo(id) {
+    await fetch(`${SUPABASE_URL}/rest/v1/todos?id=eq.${id}`, {
+        method: 'DELETE',
+        headers
+    });
+}
+
+function addTodoToDOM(id, text, done = false) {
     const li = document.createElement('li');
+    li.dataset.id = id;
     if (done) li.classList.add('done');
 
     const checkbox = document.createElement('input');
@@ -27,7 +58,7 @@ function addTodoToDOM(text, done = false) {
     checkbox.checked = done;
     checkbox.addEventListener('change', () => {
         li.classList.toggle('done');
-        saveTodos();
+        updateTodo(id, { done: checkbox.checked });
     });
 
     const span = document.createElement('span');
@@ -50,7 +81,7 @@ function addTodoToDOM(text, done = false) {
             const newText = editInput.value.trim();
             if (newText) {
                 span.textContent = newText;
-                saveTodos();
+                updateTodo(id, { text: newText });
             }
             editInput.replaceWith(span);
             saveBtn.replaceWith(editBtn);
@@ -74,20 +105,11 @@ function addTodoToDOM(text, done = false) {
     deleteBtn.textContent = '\u2715';
     deleteBtn.addEventListener('click', () => {
         li.remove();
-        saveTodos();
+        deleteTodo(id);
     });
 
     li.append(checkbox, span, editBtn, deleteBtn);
     list.appendChild(li);
-}
-
-function addTodo() {
-    const text = input.value.trim();
-    if (!text) return;
-    addTodoToDOM(text);
-    saveTodos();
-    input.value = '';
-    input.focus();
 }
 
 addBtn.addEventListener('click', addTodo);
