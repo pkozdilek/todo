@@ -8,7 +8,18 @@
 </head>
 <body>
     <div class="container">
-        <h1>Yapilacaklar Listesi</h1>
+        <!-- Top bar: sol taraf bildirim+cikis, sag taraf ayarlar -->
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <button id="notifBtn" title="Bildirimleri Ac">&#128276;</button>
+                <button id="logoutBtn">Cikis</button>
+            </div>
+            <h1>Yapilacaklar Listesi</h1>
+            <div class="top-bar-right">
+                <span id="userEmail"></span>
+                <button id="settingsBtn" title="Ayarlar">&#9881;</button>
+            </div>
+        </div>
 
         <div id="authSection">
             <div id="authTabs">
@@ -30,48 +41,85 @@
         </div>
 
         <div id="appSection" style="display:none">
-            <div class="user-bar">
-                <span id="userEmail"></span>
-                <div class="user-bar-actions">
-                    <button id="notifBtn" title="Bildirimleri Ac">&#128276;</button>
-                    <button id="tagsBtn" title="Etiket Yonetimi">&#127991;</button>
-                    <button id="logoutBtn">Cikis</button>
-                </div>
-            </div>
-            <div class="input-area">
+            <div class="input-row">
                 <input type="text" id="todoInput" placeholder="Yeni gorev ekle...">
-                <button id="addBtn">Ekle</button>
-            </div>
-            <div class="input-extras">
                 <input type="datetime-local" id="dueDateInput" title="Son tarih">
                 <select id="priorityInput" title="Oncelik">
                     <option value="1">Dusuk</option>
                     <option value="2" selected>Orta</option>
                     <option value="3">Yuksek</option>
                 </select>
-                <input type="text" id="tagsInput" placeholder="Etiketler (virgul ile)" title="Etiketler">
+                <input type="text" id="tagsInput" placeholder="Etiketler (virgul ile)">
+                <button id="addBtn">Ekle</button>
             </div>
 
-            <h2 class="group-header">Aktif Gorevler</h2>
-            <ul id="activeTodos"></ul>
-            <h2 class="group-header">Tamamlanan Gorevler</h2>
-            <ul id="completedTodos"></ul>
+            <div class="todo-columns">
+                <div class="todo-column">
+                    <h2 class="group-header active-header">Aktif Gorevler</h2>
+                    <div id="activeTodos"></div>
+                </div>
+                <div class="todo-column">
+                    <h2 class="group-header completed-header">Tamamlanan Gorevler</h2>
+                    <div id="completedTodos"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Etiket Yonetim Modali -->
-    <div id="tagModal" class="modal">
-        <div class="modal-content">
+    <!-- Ayarlar Modali -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content modal-wide">
             <div class="modal-header">
-                <h3>Etiket Yonetimi</h3>
-                <button id="closeTagModal" class="modal-close">&times;</button>
+                <h3>Kullanici Ayarlari</h3>
+                <button class="modal-close" data-close="settingsModal">&times;</button>
             </div>
-            <div class="tag-form">
-                <input type="text" id="newTagName" placeholder="Etiket adi">
-                <input type="color" id="newTagColor" value="#e94560">
-                <button id="addTagBtn">Ekle</button>
+            <div class="settings-sections">
+                <!-- Hesap -->
+                <div class="settings-section">
+                    <h4>Hesap</h4>
+                    <div class="setting-row">
+                        <label>E-posta</label>
+                        <span id="settingsEmail" class="setting-value"></span>
+                    </div>
+                </div>
+                <!-- Bildirim -->
+                <div class="settings-section">
+                    <h4>Bildirimler</h4>
+                    <div class="setting-row">
+                        <label>Bildirim Durumu</label>
+                        <button id="settingsNotifToggle" class="setting-btn">Ac</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>Hatirlatma Suresi (dk)</label>
+                        <input type="number" id="settingsReminderMin" value="15" min="1" max="120" class="setting-input">
+                    </div>
+                </div>
+                <!-- Varsayilan Degerler -->
+                <div class="settings-section">
+                    <h4>Varsayilan Degerler</h4>
+                    <div class="setting-row">
+                        <label>Varsayilan Oncelik</label>
+                        <select id="settingsDefaultPriority" class="setting-input">
+                            <option value="1">Dusuk</option>
+                            <option value="2" selected>Orta</option>
+                            <option value="3">Yuksek</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Etiket Yonetimi -->
+                <div class="settings-section">
+                    <h4>Etiket Yonetimi</h4>
+                    <div class="tag-form">
+                        <input type="text" id="newTagName" placeholder="Etiket adi">
+                        <input type="color" id="newTagColor" value="#e94560">
+                        <button id="addTagBtn">Ekle</button>
+                    </div>
+                    <ul id="tagList"></ul>
+                </div>
             </div>
-            <ul id="tagList"></ul>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn-primary">Kaydet</button>
+            </div>
         </div>
     </div>
 

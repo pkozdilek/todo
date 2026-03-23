@@ -7,6 +7,11 @@ const PRIORITY_MAP = {
     3: { label: 'Yuksek', class: 'high' }
 };
 
+const MONTHS_TR = [
+    'Ocak', 'Subat', 'Mart', 'Nisan', 'Mayis', 'Haziran',
+    'Temmuz', 'Agustos', 'Eylul', 'Ekim', 'Kasim', 'Aralik'
+];
+
 // --- State ---
 let accessToken = null;
 let currentUser = null;
@@ -14,6 +19,26 @@ let userTags = [];
 let activeTodosData = [];
 let notifiedIds = new Set();
 let notifInterval = null;
+
+// Settings (persisted in localStorage)
+let settings = {
+    reminderMinutes: 15,
+    defaultPriority: 2,
+    notificationsEnabled: false
+};
+
+function loadSettings() {
+    const stored = localStorage.getItem('todo_settings');
+    if (stored) {
+        try { Object.assign(settings, JSON.parse(stored)); } catch {}
+    }
+}
+
+function saveSettings() {
+    localStorage.setItem('todo_settings', JSON.stringify(settings));
+}
+
+loadSettings();
 
 // --- DOM ---
 const authSection = document.getElementById('authSection');
@@ -29,12 +54,13 @@ const addBtn = document.getElementById('addBtn');
 const dueDateInput = document.getElementById('dueDateInput');
 const priorityInput = document.getElementById('priorityInput');
 const tagsInput = document.getElementById('tagsInput');
-const activeTodosList = document.getElementById('activeTodos');
-const completedTodosList = document.getElementById('completedTodos');
+const activeTodosEl = document.getElementById('activeTodos');
+const completedTodosEl = document.getElementById('completedTodos');
 const notifBtn = document.getElementById('notifBtn');
-const tagsBtn = document.getElementById('tagsBtn');
-const tagModal = document.getElementById('tagModal');
-const closeTagModal = document.getElementById('closeTagModal');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const topBarLeft = document.querySelector('.top-bar-left');
+const topBarRight = document.querySelector('.top-bar-right');
 const newTagName = document.getElementById('newTagName');
 const newTagColor = document.getElementById('newTagColor');
 const addTagBtn = document.getElementById('addTagBtn');
@@ -61,6 +87,12 @@ function showApp(user) {
     userEmailEl.textContent = user.email;
     authSection.style.display = 'none';
     appSection.style.display = 'block';
+    topBarLeft.style.display = 'flex';
+    topBarRight.style.display = 'flex';
+    priorityInput.value = settings.defaultPriority;
+    if (settings.notificationsEnabled && Notification.permission === 'granted') {
+        notifBtn.classList.add('active');
+    }
     loadUserTags();
     loadTodos();
     startNotificationChecker();
@@ -72,8 +104,10 @@ function showAuth() {
     localStorage.removeItem('sb_session');
     authSection.style.display = 'block';
     appSection.style.display = 'none';
-    activeTodosList.innerHTML = '';
-    completedTodosList.innerHTML = '';
+    topBarLeft.style.display = 'none';
+    topBarRight.style.display = 'none';
+    activeTodosEl.innerHTML = '';
+    completedTodosEl.innerHTML = '';
     activeTodosData = [];
     notifiedIds.clear();
     if (notifInterval) {
@@ -81,6 +115,10 @@ function showAuth() {
         notifInterval = null;
     }
 }
+
+// Hide top bar buttons initially
+topBarLeft.style.display = 'none';
+topBarRight.style.display = 'none';
 
 // --- Auth tabs ---
 document.querySelectorAll('.auth-tab').forEach(tab => {
@@ -243,25 +281,83 @@ async function handleAuthRedirect() {
 }
 
 // --- Todo CRUD ---
+function getMonthKey(dateStr) {
+    if (!dateStr) return 'Tarihsiz';
+    const d = new Date(dateStr);
+    return `${MONTHS_TR[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function groupByMonth(todos) {
+    const groups = {};
+    todos.forEach(todo => {
+        const key = getMonthKey(todo.due_date);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(todo);
+    });
+    return groups;
+}
+
+function renderGroupedTodos(groups, container, isDoneList) {
+    container.innerHTML = '';
+    const keys = Object.keys(groups);
+    // Sort: dated months chronologically, 'Tarihsiz' last
+    keys.sort((a, b) => {
+        if (a === 'Tarihsiz') return 1;
+        if (b === 'Tarihsiz') return -1;
+        const parse = k => {
+            const parts = k.split(' ');
+            return new Date(parseInt(parts[1]), MONTHS_TR.indexOf(parts[0]));
+        };
+        return parse(a) - parse(b);
+    });
+
+    keys.forEach(key => {
+        const header = document.createElement('div');
+        header.className = 'month-header';
+        header.textContent = key;
+        container.appendChild(header);
+
+        groups[key].forEach(todo => {
+            addTodoToDOM(todo, container);
+        });
+    });
+}
+
 async function loadTodos() {
     const res = await fetch(
         `${SUPABASE_URL}/rest/v1/todos?order=priority.desc,due_date.asc.nullslast,created_at.asc`,
         { headers: authHeaders() }
     );
     const todos = await res.json();
-    activeTodosList.innerHTML = '';
-    completedTodosList.innerHTML = '';
     activeTodosData = [];
 
-    if (Array.isArray(todos)) {
-        todos.forEach(todo => {
-            const targetList = todo.done ? completedTodosList : activeTodosList;
-            addTodoToDOM(todo, targetList);
-            if (!todo.done) {
-                activeTodosData.push(todo);
-            }
-        });
+    if (!Array.isArray(todos)) return;
+
+    const activeTodos = [];
+    const completedTodos = [];
+    const now = new Date();
+
+    for (const todo of todos) {
+        // Mark overdue if due_date passed and not done and not already marked
+        if (!todo.done && todo.due_date && new Date(todo.due_date) < now && !todo.overdue) {
+            todo.overdue = true;
+            // Fire-and-forget update
+            updateTodo(todo.id, { overdue: true });
+        }
+
+        if (todo.done) {
+            completedTodos.push(todo);
+        } else {
+            activeTodos.push(todo);
+            activeTodosData.push(todo);
+        }
     }
+
+    const activeGroups = groupByMonth(activeTodos);
+    const completedGroups = groupByMonth(completedTodos);
+
+    renderGroupedTodos(activeGroups, activeTodosEl, false);
+    renderGroupedTodos(completedGroups, completedTodosEl, true);
 }
 
 async function addTodoFn() {
@@ -279,16 +375,15 @@ async function addTodoFn() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/todos`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ text, done: false, due_date, priority, tags })
+        body: JSON.stringify({ text, done: false, due_date, priority, tags, overdue: false })
     });
     const data = await res.json();
     if (Array.isArray(data) && data.length > 0) {
-        addTodoToDOM(data[0], activeTodosList);
-        activeTodosData.push(data[0]);
+        loadTodos();
     }
     todoInput.value = '';
     dueDateInput.value = '';
-    priorityInput.value = '2';
+    priorityInput.value = settings.defaultPriority;
     tagsInput.value = '';
     todoInput.focus();
 }
@@ -326,14 +421,15 @@ function formatDueDate(dateStr) {
     return { text: dateFormatted, className };
 }
 
-function addTodoToDOM(todo, targetList) {
-    const { id, text, done, due_date, priority, tags } = todo;
+function addTodoToDOM(todo, container) {
+    const { id, text, done, due_date, priority, tags, overdue } = todo;
     const pri = PRIORITY_MAP[priority] || PRIORITY_MAP[1];
 
-    const li = document.createElement('li');
+    const li = document.createElement('div');
+    li.className = `todo-item priority-${pri.class}`;
     li.dataset.id = id;
-    li.classList.add(`priority-${pri.class}`);
     if (done) li.classList.add('done');
+    if (overdue && !done) li.classList.add('is-overdue');
 
     // Main row
     const mainRow = document.createElement('div');
@@ -343,7 +439,11 @@ function addTodoToDOM(todo, targetList) {
     checkbox.type = 'checkbox';
     checkbox.checked = done;
     checkbox.addEventListener('change', async () => {
-        await updateTodo(id, { done: checkbox.checked });
+        const newDone = checkbox.checked;
+        // If completing an overdue task, clear overdue
+        const patch = { done: newDone };
+        if (newDone && overdue) patch.overdue = false;
+        await updateTodo(id, patch);
         loadTodos();
     });
 
@@ -353,6 +453,16 @@ function addTodoToDOM(todo, targetList) {
     const priorityBadge = document.createElement('span');
     priorityBadge.className = `priority-badge ${pri.class}`;
     priorityBadge.textContent = pri.label;
+
+    mainRow.append(checkbox, span, priorityBadge);
+
+    // Overdue badge
+    if (overdue && !done) {
+        const overdueBadge = document.createElement('span');
+        overdueBadge.className = 'overdue-badge';
+        overdueBadge.textContent = 'GECiKTi';
+        mainRow.appendChild(overdueBadge);
+    }
 
     const editBtn = document.createElement('button');
     editBtn.textContent = '\u270E';
@@ -367,7 +477,7 @@ function addTodoToDOM(todo, targetList) {
         activeTodosData = activeTodosData.filter(t => t.id !== id);
     });
 
-    mainRow.append(checkbox, span, priorityBadge, editBtn, deleteBtn);
+    mainRow.append(editBtn, deleteBtn);
 
     // Meta row
     const metaRow = document.createElement('div');
@@ -391,16 +501,16 @@ function addTodoToDOM(todo, targetList) {
         });
     }
 
-    li.append(mainRow);
+    li.appendChild(mainRow);
     if (metaRow.children.length > 0) {
-        li.append(metaRow);
+        li.appendChild(metaRow);
     }
-    targetList.appendChild(li);
+    container.appendChild(li);
 }
 
 function enterEditMode(li, todo) {
     const mainRow = li.querySelector('.todo-main');
-    const span = mainRow.querySelector('span:not(.priority-badge)');
+    const span = mainRow.querySelector('span:not(.priority-badge):not(.overdue-badge)');
     const editBtn = mainRow.querySelector('.edit-btn');
 
     const editInput = document.createElement('input');
@@ -412,7 +522,6 @@ function enterEditMode(li, todo) {
     saveBtn.textContent = '\u2713';
     saveBtn.classList.add('save-btn');
 
-    // Edit extras row
     const extrasRow = document.createElement('div');
     extrasRow.className = 'edit-extras';
 
@@ -460,7 +569,6 @@ function enterEditMode(li, todo) {
             tags: newTags
         });
 
-        // Reload to reflect changes properly
         loadTodos();
     }
 
@@ -536,40 +644,91 @@ function renderTagList() {
     });
 }
 
-// Tag modal events
-tagsBtn.addEventListener('click', () => {
+// --- Settings Modal ---
+settingsBtn.addEventListener('click', () => {
+    document.getElementById('settingsEmail').textContent = currentUser?.email || '';
+    document.getElementById('settingsReminderMin').value = settings.reminderMinutes;
+    document.getElementById('settingsDefaultPriority').value = settings.defaultPriority;
+
+    const notifToggle = document.getElementById('settingsNotifToggle');
+    if (settings.notificationsEnabled && Notification.permission === 'granted') {
+        notifToggle.textContent = 'Acik';
+        notifToggle.classList.add('on');
+    } else {
+        notifToggle.textContent = 'Kapali';
+        notifToggle.classList.remove('on');
+    }
+
     renderTagList();
-    tagModal.classList.add('open');
+    settingsModal.classList.add('open');
 });
 
-closeTagModal.addEventListener('click', () => {
-    tagModal.classList.remove('open');
+document.getElementById('settingsNotifToggle').addEventListener('click', () => {
+    const btn = document.getElementById('settingsNotifToggle');
+    if (!settings.notificationsEnabled) {
+        if (!('Notification' in window)) {
+            alert('Bu tarayici bildirimleri desteklemiyor.');
+            return;
+        }
+        Notification.requestPermission().then(perm => {
+            if (perm === 'granted') {
+                settings.notificationsEnabled = true;
+                btn.textContent = 'Acik';
+                btn.classList.add('on');
+                notifBtn.classList.add('active');
+            }
+        });
+    } else {
+        settings.notificationsEnabled = false;
+        btn.textContent = 'Kapali';
+        btn.classList.remove('on');
+        notifBtn.classList.remove('active');
+    }
 });
 
-tagModal.addEventListener('click', (e) => {
-    if (e.target === tagModal) tagModal.classList.remove('open');
+document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+    settings.reminderMinutes = parseInt(document.getElementById('settingsReminderMin').value) || 15;
+    settings.defaultPriority = parseInt(document.getElementById('settingsDefaultPriority').value) || 2;
+    saveSettings();
+    priorityInput.value = settings.defaultPriority;
+    settingsModal.classList.remove('open');
+});
+
+// Close modals
+document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const modalId = btn.dataset.close;
+        if (modalId) document.getElementById(modalId).classList.remove('open');
+    });
+});
+
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('open');
+    });
 });
 
 addTagBtn.addEventListener('click', () => {
     const name = newTagName.value.trim();
     if (!name) return;
-    const color = newTagColor.value;
-    createUserTag(name, color);
+    createUserTag(name, newTagColor.value);
     newTagName.value = '';
 });
 
 // --- Notification System ---
-function requestNotificationPermission() {
+notifBtn.addEventListener('click', () => {
     if (!('Notification' in window)) {
         alert('Bu tarayici bildirimleri desteklemiyor.');
         return;
     }
     Notification.requestPermission().then(perm => {
         if (perm === 'granted') {
+            settings.notificationsEnabled = true;
             notifBtn.classList.add('active');
+            saveSettings();
         }
     });
-}
+});
 
 function startNotificationChecker() {
     if (notifInterval) clearInterval(notifInterval);
@@ -577,25 +736,36 @@ function startNotificationChecker() {
 }
 
 function checkUpcomingTodos() {
-    if (Notification.permission !== 'granted') return;
+    if (!settings.notificationsEnabled || Notification.permission !== 'granted') return;
     const now = new Date();
-    const fifteenMin = 15 * 60 * 1000;
+    const reminderMs = settings.reminderMinutes * 60 * 1000;
 
     activeTodosData.forEach(todo => {
         if (!todo.due_date || notifiedIds.has(todo.id)) return;
         const due = new Date(todo.due_date);
         const diff = due - now;
-        if (diff > 0 && diff <= fifteenMin) {
+
+        // Notify if within reminder window
+        if (diff > 0 && diff <= reminderMs) {
             new Notification('Yaklasan Gorev!', {
                 body: todo.text,
                 icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📋</text></svg>'
             });
             notifiedIds.add(todo.id);
         }
+
+        // Notify and mark overdue if past due
+        if (diff < 0 && !todo.overdue) {
+            new Notification('Geciken Gorev!', {
+                body: `"${todo.text}" gorevinin suresi doldu!`,
+                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚠️</text></svg>'
+            });
+            notifiedIds.add(todo.id);
+            todo.overdue = true;
+            updateTodo(todo.id, { overdue: true });
+        }
     });
 }
-
-notifBtn.addEventListener('click', requestNotificationPermission);
 
 // --- Add todo events ---
 addBtn.addEventListener('click', addTodoFn);
