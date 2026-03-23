@@ -1,0 +1,136 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+}
+
+.container {
+    background: #16213e;
+    padding: 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 1.6rem;
+    color: #e94560;
+}
+
+.input-area {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+#todoInput {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#todoInput:focus {
+    border-color: #e94560;
+}
+
+#addBtn {
+    padding: 10px 20px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#addBtn:hover {
+    background: #c73652;
+}
+
+#todoList {
+    list-style: none;
+}
+
+#todoList li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #0f3460;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: opacity 0.3s;
+}
+
+#todoList li.done span {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+#todoList li span {
+    flex: 1;
+    font-size: 1rem;
+}
+
+#todoList li button {
+    background: none;
+    border: none;
+    color: #e94560;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+#todoList li button:hover {
+    background: rgba(233, 69, 96, 0.2);
+}
+
+#todoList li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #e94560;
+    cursor: pointer;
+}
+
+#todoList li .edit-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid #e94560;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 1rem;
+    outline: none;
+}
+
+#todoList li .save-btn {
+    color: #4ecca3;
+    font-size: 1.3rem;
+}
+
+#todoList li .save-btn:hover {
+    background: rgba(78, 204, 163, 0.2);
+}
