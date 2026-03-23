@@ -69,7 +69,11 @@ registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('registerEmail').value;
     const password = document.getElementById('registerPassword').value;
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
     registerMsg.textContent = '';
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Gonderiliyor...';
 
     const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
@@ -81,11 +85,15 @@ registerForm.addEventListener('submit', async (e) => {
     if (res.ok) {
         if (data.identities && data.identities.length === 0) {
             showMsg(registerMsg, 'Bu e-posta zaten kayitli.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Kayit Ol';
         } else {
             showMsg(registerMsg, 'Kayit basarili! E-postani kontrol et ve onay linkine tikla.', 'success');
         }
     } else {
         showMsg(registerMsg, data.error_description || data.msg || 'Kayit hatasi.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Kayit Ol';
     }
 });
 
