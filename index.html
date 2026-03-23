@@ -9,11 +9,37 @@
 <body>
     <div class="container">
         <h1>Yapilacaklar Listesi</h1>
-        <div class="input-area">
-            <input type="text" id="todoInput" placeholder="Yeni gorev ekle...">
-            <button id="addBtn">Ekle</button>
+
+        <div id="authSection">
+            <div id="authTabs">
+                <button class="auth-tab active" data-tab="login">Giris Yap</button>
+                <button class="auth-tab" data-tab="register">Kayit Ol</button>
+            </div>
+            <form id="loginForm" class="auth-form">
+                <input type="email" id="loginEmail" placeholder="E-posta" required>
+                <input type="password" id="loginPassword" placeholder="Sifre" required>
+                <button type="submit">Giris Yap</button>
+                <p id="loginMsg" class="auth-msg"></p>
+            </form>
+            <form id="registerForm" class="auth-form" style="display:none">
+                <input type="email" id="registerEmail" placeholder="E-posta" required>
+                <input type="password" id="registerPassword" placeholder="Sifre (min 6 karakter)" required minlength="6">
+                <button type="submit">Kayit Ol</button>
+                <p id="registerMsg" class="auth-msg"></p>
+            </form>
         </div>
-        <ul id="todoList"></ul>
+
+        <div id="appSection" style="display:none">
+            <div class="user-bar">
+                <span id="userEmail"></span>
+                <button id="logoutBtn">Cikis</button>
+            </div>
+            <div class="input-area">
+                <input type="text" id="todoInput" placeholder="Yeni gorev ekle...">
+                <button id="addBtn">Ekle</button>
+            </div>
+            <ul id="todoList"></ul>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>
