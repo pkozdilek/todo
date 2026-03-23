@@ -174,26 +174,56 @@ async function restoreSession() {
 }
 
 // --- Handle email confirmation redirect ---
-function handleAuthRedirect() {
+async function handleAuthRedirect() {
+    const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
+
+    // Handle token-based confirmation (query param from custom email template)
+    const confirmationToken = params.get('confirmation_token');
+    const type = params.get('type');
+    if (confirmationToken && type === 'signup') {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: confirmationToken, type: 'signup' })
+        });
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+        if (res.ok) {
+            const data = await res.json();
+            accessToken = data.access_token;
+            localStorage.setItem('sb_session', JSON.stringify({
+                access_token: data.access_token,
+                refresh_token: data.refresh_token,
+                email: data.user.email
+            }));
+            showApp({ email: data.user.email, access_token: data.access_token });
+        } else {
+            showMsg(loginMsg, 'Onay linki gecersiz veya suresi dolmus. Tekrar kayit ol.', 'error');
+        }
+        return true;
+    }
+
+    // Handle hash-based redirect (default Supabase flow)
     if (hash && hash.includes('access_token')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
         if (access_token) {
             accessToken = access_token;
-            fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${access_token}` }
-            }).then(r => r.json()).then(user => {
-                localStorage.setItem('sb_session', JSON.stringify({
-                    access_token, refresh_token, email: user.email
-                }));
-                window.location.hash = '';
-                showApp({ email: user.email, access_token });
             });
+            const user = await userRes.json();
+            localStorage.setItem('sb_session', JSON.stringify({
+                access_token, refresh_token, email: user.email
+            }));
+            window.location.hash = '';
+            showApp({ email: user.email, access_token });
             return true;
         }
     }
+
     return false;
 }
 
@@ -308,6 +338,7 @@ todoInput.addEventListener('keydown', (e) => {
 });
 
 // --- Init ---
-if (!handleAuthRedirect()) {
-    restoreSession();
-}
+(async () => {
+    const handled = await handleAuthRedirect();
+    if (!handled) restoreSession();
+})();
