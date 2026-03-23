@@ -175,36 +175,10 @@ async function restoreSession() {
 
 // --- Handle email confirmation redirect ---
 async function handleAuthRedirect() {
-    const params = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
 
-    // Handle token-based confirmation (query param from custom email template)
-    const confirmationToken = params.get('confirmation_token');
-    const type = params.get('type');
-    if (confirmationToken && type === 'signup') {
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
-            method: 'POST',
-            headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: confirmationToken, type: 'signup' })
-        });
-        // Clean URL
-        window.history.replaceState({}, '', window.location.pathname);
-        if (res.ok) {
-            const data = await res.json();
-            accessToken = data.access_token;
-            localStorage.setItem('sb_session', JSON.stringify({
-                access_token: data.access_token,
-                refresh_token: data.refresh_token,
-                email: data.user.email
-            }));
-            showApp({ email: data.user.email, access_token: data.access_token });
-        } else {
-            showMsg(loginMsg, 'Onay linki gecersiz veya suresi dolmus. Tekrar kayit ol.', 'error');
-        }
-        return true;
-    }
-
-    // Handle hash-based redirect (default Supabase flow)
+    // Handle hash-based redirect (Supabase ConfirmationURL flow)
+    // After email link click, Supabase redirects to site_url#access_token=...
     if (hash && hash.includes('access_token')) {
         const hashParams = new URLSearchParams(hash.substring(1));
         const access_token = hashParams.get('access_token');
@@ -222,6 +196,17 @@ async function handleAuthRedirect() {
             showApp({ email: user.email, access_token });
             return true;
         }
+    }
+
+    // Handle error redirect from Supabase
+    if (hash && hash.includes('error')) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const errorDesc = hashParams.get('error_description');
+        window.location.hash = '';
+        if (errorDesc) {
+            showMsg(loginMsg, errorDesc.replace(/\+/g, ' '), 'error');
+        }
+        return true;
     }
 
     return false;
