@@ -300,6 +300,7 @@ function groupByMonth(todos) {
 function renderGroupedTodos(groups, container, isDoneList) {
     container.innerHTML = '';
     const keys = Object.keys(groups);
+    const colCount = 8;
     // Sort: dated months chronologically, 'Tarihsiz' last
     keys.sort((a, b) => {
         if (a === 'Tarihsiz') return 1;
@@ -312,10 +313,14 @@ function renderGroupedTodos(groups, container, isDoneList) {
     });
 
     keys.forEach(key => {
-        const header = document.createElement('div');
-        header.className = 'month-header';
-        header.textContent = key;
-        container.appendChild(header);
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'month-header-row';
+        const headerCell = document.createElement('td');
+        headerCell.colSpan = colCount;
+        headerCell.className = 'month-header';
+        headerCell.textContent = key;
+        headerRow.appendChild(headerCell);
+        container.appendChild(headerRow);
 
         groups[key].forEach(todo => {
             addTodoToDOM(todo, container);
@@ -403,138 +408,158 @@ async function deleteTodo(id) {
     });
 }
 
-function formatDueDate(dateStr) {
-    if (!dateStr) return null;
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = d - now;
-    const pad = n => String(n).padStart(2, '0');
-    const dateFormatted = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
-    let className = 'due-date';
-    if (diff < 0) {
-        className += ' overdue';
-    } else if (diff < 60 * 60 * 1000) {
-        className += ' soon';
-    }
-
-    return { text: dateFormatted, className };
-}
-
 function addTodoToDOM(todo, container) {
     const { id, text, done, due_date, priority, tags, overdue } = todo;
     const pri = PRIORITY_MAP[priority] || PRIORITY_MAP[1];
 
-    const li = document.createElement('div');
-    li.className = `todo-item priority-${pri.class}`;
-    li.dataset.id = id;
-    if (done) li.classList.add('done');
-    if (overdue && !done) li.classList.add('is-overdue');
+    const tr = document.createElement('tr');
+    tr.className = `todo-row priority-${pri.class}`;
+    tr.dataset.id = id;
+    if (done) tr.classList.add('done');
+    if (overdue && !done) tr.classList.add('is-overdue');
 
-    // Main row
-    const mainRow = document.createElement('div');
-    mainRow.className = 'todo-main';
-
+    // Checkbox cell
+    const tdCheck = document.createElement('td');
+    tdCheck.className = 'td-check';
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = done;
     checkbox.addEventListener('change', async () => {
         const newDone = checkbox.checked;
-        // If completing an overdue task, clear overdue
         const patch = { done: newDone };
         if (newDone && overdue) patch.overdue = false;
         await updateTodo(id, patch);
         loadTodos();
     });
+    tdCheck.appendChild(checkbox);
 
+    // Text cell
+    const tdText = document.createElement('td');
+    tdText.className = 'td-text';
     const span = document.createElement('span');
     span.textContent = text;
+    tdText.appendChild(span);
 
+    // Date & Time cells
+    const tdDate = document.createElement('td');
+    tdDate.className = 'td-date';
+    const tdTime = document.createElement('td');
+    tdTime.className = 'td-time';
+    if (due_date) {
+        const d = new Date(due_date);
+        const pad = n => String(n).padStart(2, '0');
+        const diff = d - new Date();
+        let cls = '';
+        if (diff < 0) cls = ' overdue';
+        else if (diff < 60 * 60 * 1000) cls = ' soon';
+        tdDate.innerHTML = `<span class="due-date${cls}">${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}</span>`;
+        tdTime.innerHTML = `<span class="due-date${cls}">${pad(d.getHours())}:${pad(d.getMinutes())}</span>`;
+    } else {
+        tdDate.textContent = '-';
+        tdTime.textContent = '-';
+    }
+
+    // Priority cell
+    const tdPriority = document.createElement('td');
+    tdPriority.className = 'td-priority';
     const priorityBadge = document.createElement('span');
     priorityBadge.className = `priority-badge ${pri.class}`;
     priorityBadge.textContent = pri.label;
+    tdPriority.appendChild(priorityBadge);
 
-    mainRow.append(checkbox, span, priorityBadge);
-
-    // Overdue badge
-    if (overdue && !done) {
-        const overdueBadge = document.createElement('span');
-        overdueBadge.className = 'overdue-badge';
-        overdueBadge.textContent = 'GECiKTi';
-        mainRow.appendChild(overdueBadge);
-    }
-
-    const editBtn = document.createElement('button');
-    editBtn.textContent = '\u270E';
-    editBtn.classList.add('edit-btn');
-    editBtn.addEventListener('click', () => enterEditMode(li, todo));
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = '\u2715';
-    deleteBtn.addEventListener('click', () => {
-        li.remove();
-        deleteTodo(id);
-        activeTodosData = activeTodosData.filter(t => t.id !== id);
-    });
-
-    mainRow.append(editBtn, deleteBtn);
-
-    // Meta row
-    const metaRow = document.createElement('div');
-    metaRow.className = 'todo-meta';
-
-    const dueDateInfo = formatDueDate(due_date);
-    if (dueDateInfo) {
-        const dateEl = document.createElement('span');
-        dateEl.className = dueDateInfo.className;
-        dateEl.textContent = dueDateInfo.text;
-        metaRow.appendChild(dateEl);
-    }
-
-    if (Array.isArray(tags)) {
+    // Tags cell
+    const tdTags = document.createElement('td');
+    tdTags.className = 'td-tags';
+    if (Array.isArray(tags) && tags.length > 0) {
         tags.forEach(tag => {
             const tagEl = document.createElement('span');
             tagEl.className = 'tag';
             tagEl.style.backgroundColor = tag.color || '#e94560';
             tagEl.textContent = tag.name;
-            metaRow.appendChild(tagEl);
+            tdTags.appendChild(tagEl);
         });
+    } else {
+        tdTags.textContent = '-';
     }
 
-    li.appendChild(mainRow);
-    if (metaRow.children.length > 0) {
-        li.appendChild(metaRow);
+    // Overdue/status cell
+    const tdOverdue = document.createElement('td');
+    tdOverdue.className = 'td-overdue';
+    if (overdue && !done) {
+        const overdueBadge = document.createElement('span');
+        overdueBadge.className = 'overdue-badge';
+        overdueBadge.textContent = 'GECiKTi';
+        tdOverdue.appendChild(overdueBadge);
+    } else if (done) {
+        tdOverdue.innerHTML = '<span class="done-badge">Tamam</span>';
+    } else {
+        tdOverdue.innerHTML = '<span class="active-badge">Aktif</span>';
     }
-    container.appendChild(li);
+
+    // Actions cell
+    const tdActions = document.createElement('td');
+    tdActions.className = 'td-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '\u270E';
+    editBtn.classList.add('edit-btn');
+    editBtn.addEventListener('click', () => enterEditMode(tr, todo));
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '\u2715';
+    deleteBtn.classList.add('delete-btn');
+    deleteBtn.addEventListener('click', () => {
+        tr.remove();
+        deleteTodo(id);
+        activeTodosData = activeTodosData.filter(t => t.id !== id);
+    });
+
+    tdActions.append(editBtn, deleteBtn);
+
+    tr.append(tdCheck, tdText, tdDate, tdTime, tdPriority, tdTags, tdOverdue, tdActions);
+    container.appendChild(tr);
 }
 
-function enterEditMode(li, todo) {
-    const mainRow = li.querySelector('.todo-main');
-    const span = mainRow.querySelector('span:not(.priority-badge):not(.overdue-badge)');
-    const editBtn = mainRow.querySelector('.edit-btn');
+function enterEditMode(tr, todo) {
+    const tdText = tr.querySelector('.td-text');
+    const tdDate = tr.querySelector('.td-date');
+    const tdTime = tr.querySelector('.td-time');
+    const tdPriority = tr.querySelector('.td-priority');
+    const tdTags = tr.querySelector('.td-tags');
+    const editBtn = tr.querySelector('.edit-btn');
 
+    // Save originals for cancel
+    const origText = tdText.innerHTML;
+    const origDate = tdDate.innerHTML;
+    const origTime = tdTime.innerHTML;
+    const origPriority = tdPriority.innerHTML;
+    const origTags = tdTags.innerHTML;
+
+    // Text edit
     const editInput = document.createElement('input');
     editInput.type = 'text';
     editInput.classList.add('edit-input');
-    editInput.value = span.textContent;
+    editInput.value = todo.text;
+    tdText.innerHTML = '';
+    tdText.appendChild(editInput);
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = '\u2713';
-    saveBtn.classList.add('save-btn');
-
-    const extrasRow = document.createElement('div');
-    extrasRow.className = 'edit-extras';
-
+    // Date+Time edit (combined in date cell, time cell cleared)
     const editDate = document.createElement('input');
     editDate.type = 'datetime-local';
+    editDate.classList.add('edit-input');
     if (todo.due_date) {
         const d = new Date(todo.due_date);
         const offset = d.getTimezoneOffset();
         const local = new Date(d.getTime() - offset * 60000);
         editDate.value = local.toISOString().slice(0, 16);
     }
+    tdDate.innerHTML = '';
+    tdDate.appendChild(editDate);
+    tdTime.innerHTML = '';
 
+    // Priority edit
     const editPriority = document.createElement('select');
+    editPriority.classList.add('edit-input');
     [1, 2, 3].forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -542,13 +567,23 @@ function enterEditMode(li, todo) {
         if (v === (todo.priority || 1)) opt.selected = true;
         editPriority.appendChild(opt);
     });
+    tdPriority.innerHTML = '';
+    tdPriority.appendChild(editPriority);
 
+    // Tags edit
     const editTags = document.createElement('input');
     editTags.type = 'text';
+    editTags.classList.add('edit-input');
     editTags.placeholder = 'Etiketler';
     editTags.value = Array.isArray(todo.tags) ? todo.tags.map(t => t.name).join(', ') : '';
+    tdTags.innerHTML = '';
+    tdTags.appendChild(editTags);
 
-    extrasRow.append(editDate, editPriority, editTags);
+    // Replace edit button with save button
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '\u2713';
+    saveBtn.classList.add('save-btn');
+    editBtn.replaceWith(saveBtn);
 
     function saveEdit() {
         const newText = editInput.value.trim();
@@ -568,25 +603,26 @@ function enterEditMode(li, todo) {
             priority: newPriority,
             tags: newTags
         });
-
         loadTodos();
     }
 
     function cancelEdit() {
-        editInput.replaceWith(span);
+        tdText.innerHTML = origText;
+        tdDate.innerHTML = origDate;
+        tdTime.innerHTML = origTime;
+        tdPriority.innerHTML = origPriority;
+        tdTags.innerHTML = origTags;
         saveBtn.replaceWith(editBtn);
-        if (extrasRow.parentNode) extrasRow.remove();
     }
 
     saveBtn.addEventListener('click', saveEdit);
-    editInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') saveEdit();
-        if (e.key === 'Escape') cancelEdit();
+    [editInput, editDate, editTags].forEach(el => {
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveEdit();
+            if (e.key === 'Escape') cancelEdit();
+        });
     });
 
-    span.replaceWith(editInput);
-    editBtn.replaceWith(saveBtn);
-    li.appendChild(extrasRow);
     editInput.focus();
 }
 

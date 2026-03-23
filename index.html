@@ -53,14 +53,46 @@
                 <button id="addBtn">Ekle</button>
             </div>
 
-            <div class="todo-columns">
-                <div class="todo-column">
+            <div class="todo-tables">
+                <div class="todo-table-section">
                     <h2 class="group-header active-header">Aktif Gorevler</h2>
-                    <div id="activeTodos"></div>
+                    <div class="table-wrapper">
+                        <table class="todo-table">
+                            <thead>
+                                <tr>
+                                    <th class="th-check"></th>
+                                    <th class="th-text">Gorev</th>
+                                    <th class="th-date">Tarih</th>
+                                    <th class="th-time">Saat</th>
+                                    <th class="th-priority">Oncelik</th>
+                                    <th class="th-tags">Etiketler</th>
+                                    <th class="th-overdue">Durum</th>
+                                    <th class="th-actions">Islem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activeTodos"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="todo-column">
+                <div class="todo-table-section">
                     <h2 class="group-header completed-header">Tamamlanan Gorevler</h2>
-                    <div id="completedTodos"></div>
+                    <div class="table-wrapper">
+                        <table class="todo-table">
+                            <thead>
+                                <tr>
+                                    <th class="th-check"></th>
+                                    <th class="th-text">Gorev</th>
+                                    <th class="th-date">Tarih</th>
+                                    <th class="th-time">Saat</th>
+                                    <th class="th-priority">Oncelik</th>
+                                    <th class="th-tags">Etiketler</th>
+                                    <th class="th-overdue">Durum</th>
+                                    <th class="th-actions">Islem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completedTodos"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

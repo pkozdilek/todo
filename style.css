@@ -20,7 +20,7 @@ body {
     padding: 24px 30px;
     border-radius: 12px;
     width: 100%;
-    max-width: 1100px;
+    max-width: 1200px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
@@ -224,21 +224,54 @@ body {
     background: #c73652;
 }
 
-/* Two-column layout for active/completed */
-.todo-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+/* Table layout for todos */
+.todo-tables {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
 }
 
-@media (max-width: 700px) {
-    .todo-columns {
-        grid-template-columns: 1fr;
-    }
+.todo-table-section {
+    width: 100%;
 }
 
-.todo-column {
-    min-width: 0;
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.todo-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.todo-table thead th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    color: #aaa;
+    border-bottom: 2px solid #0f3460;
+    white-space: nowrap;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.th-check { width: 36px; }
+.th-text { width: auto; }
+.th-date { width: 100px; }
+.th-time { width: 60px; }
+.th-priority { width: 75px; }
+.th-tags { width: 110px; }
+.th-overdue { width: 75px; }
+.th-actions { width: 70px; }
+
+.todo-table tbody td {
+    padding: 9px 10px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid rgba(15, 52, 96, 0.5);
+    vertical-align: middle;
+    color: #ddd;
 }
 
 /* Group headers */
@@ -264,26 +297,28 @@ body {
     font-weight: 600;
 }
 
-/* Todo items */
-.todo-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    background: #0f3460;
-    border-radius: 8px;
-    margin-bottom: 6px;
-    transition: opacity 0.3s;
-    border-left: 4px solid transparent;
+/* Todo rows */
+.todo-row {
+    transition: background 0.2s;
 }
 
-.todo-item.priority-high { border-left-color: #e94560; }
-.todo-item.priority-medium { border-left-color: #f5a623; }
-.todo-item.priority-low { border-left-color: #4ecca3; }
+.todo-row:hover {
+    background: rgba(15, 52, 96, 0.6);
+}
+
+.todo-row.priority-high td:first-child {
+    box-shadow: inset 3px 0 0 #e94560;
+}
+.todo-row.priority-medium td:first-child {
+    box-shadow: inset 3px 0 0 #f5a623;
+}
+.todo-row.priority-low td:first-child {
+    box-shadow: inset 3px 0 0 #4ecca3;
+}
 
 /* Overdue indicator */
-.todo-item.is-overdue {
-    background: linear-gradient(90deg, rgba(233, 69, 96, 0.15), #0f3460 40%);
+.todo-row.is-overdue {
+    background: linear-gradient(90deg, rgba(233, 69, 96, 0.12), transparent 50%);
 }
 
 .overdue-badge {
@@ -296,66 +331,81 @@ body {
     flex-shrink: 0;
 }
 
-/* Todo main row */
-.todo-main {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.todo-main span {
-    flex: 1;
-    font-size: 0.95rem;
+/* Table cell content */
+.td-text span {
     word-break: break-word;
 }
 
-.todo-item.done .todo-main span {
+.todo-row.done .td-text span {
     text-decoration: line-through;
     opacity: 0.5;
 }
 
-.todo-main button {
-    background: none;
-    border: none;
-    color: #e94560;
-    font-size: 1.1rem;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: background 0.2s;
-    flex-shrink: 0;
-}
-
-.todo-main button:hover {
-    background: rgba(233, 69, 96, 0.2);
-}
-
-.todo-main input[type="checkbox"] {
+.td-check input[type="checkbox"] {
     width: 16px;
     height: 16px;
     accent-color: #e94560;
     cursor: pointer;
-    flex-shrink: 0;
 }
 
-.todo-main .edit-input {
-    flex: 1;
-    padding: 5px 8px;
+.td-actions {
+    white-space: nowrap;
+}
+
+.td-actions button {
+    background: none;
+    border: none;
+    color: #e94560;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.td-actions button:hover {
+    background: rgba(233, 69, 96, 0.2);
+}
+
+.td-actions .save-btn {
+    color: #4ecca3;
+    font-size: 1.1rem;
+}
+
+.td-actions .save-btn:hover {
+    background: rgba(78, 204, 163, 0.2);
+}
+
+/* Inline edit inputs in table */
+.edit-input {
+    width: 100%;
+    padding: 4px 8px;
     border: 2px solid #e94560;
     border-radius: 6px;
     background: #1a1a2e;
     color: #eee;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     outline: none;
+    box-sizing: border-box;
 }
 
-.todo-main .save-btn {
-    color: #4ecca3;
-    font-size: 1.2rem;
-}
-
-.todo-main .save-btn:hover {
+/* Status badges */
+.done-badge {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
     background: rgba(78, 204, 163, 0.2);
+    color: #4ecca3;
+    font-weight: bold;
+}
+
+.active-badge {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(15, 52, 96, 0.5);
+    color: #aaa;
+    font-weight: 500;
 }
 
 /* Priority badge */
@@ -382,13 +432,9 @@ body {
     color: #4ecca3;
 }
 
-/* Todo meta row */
-.todo-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding-left: 24px;
-    flex-wrap: wrap;
+/* Month header in table */
+.month-header-row td {
+    padding: 0;
 }
 
 .due-date {
@@ -416,23 +462,18 @@ body {
     color: #fff;
 }
 
-/* Edit extras row */
-.edit-extras {
-    display: flex;
-    gap: 6px;
-    padding-left: 24px;
-    flex-wrap: wrap;
+/* Table tags cell */
+.td-tags {
+    white-space: normal;
 }
 
-.edit-extras input,
-.edit-extras select {
-    padding: 4px 8px;
-    border: 2px solid #e94560;
-    border-radius: 6px;
-    background: #1a1a2e;
-    color: #eee;
-    font-size: 0.8rem;
-    outline: none;
+.td-date, .td-time {
+    white-space: nowrap;
+    text-align: center;
+}
+
+.td-priority, .td-overdue {
+    text-align: center;
 }
 
 /* Modal */
@@ -678,9 +719,13 @@ select.setting-input {
     background: rgba(233, 69, 96, 0.2);
 }
 
-/* Hide top-bar buttons when not logged in */
-#authSection ~ .top-bar .top-bar-left,
-#authSection ~ .top-bar .top-bar-right span,
-#authSection ~ .top-bar .top-bar-right #settingsBtn {
-    visibility: visible;
+/* Responsive table */
+@media (max-width: 700px) {
+    .todo-table {
+        table-layout: auto;
+    }
+    .th-date, .th-time, .th-tags, .th-overdue,
+    .td-date, .td-time, .td-tags, .td-overdue {
+        display: none;
+    }
 }
