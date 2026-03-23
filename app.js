@@ -78,7 +78,11 @@ registerForm.addEventListener('submit', async (e) => {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+            email,
+            password,
+            options: { emailRedirectTo: 'https://pkozdilek.github.io/todo/' }
+        })
     });
     const data = await res.json();
 
