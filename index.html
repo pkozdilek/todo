@@ -32,15 +32,49 @@
         <div id="appSection" style="display:none">
             <div class="user-bar">
                 <span id="userEmail"></span>
-                <button id="logoutBtn">Cikis</button>
+                <div class="user-bar-actions">
+                    <button id="notifBtn" title="Bildirimleri Ac">&#128276;</button>
+                    <button id="tagsBtn" title="Etiket Yonetimi">&#127991;</button>
+                    <button id="logoutBtn">Cikis</button>
+                </div>
             </div>
             <div class="input-area">
                 <input type="text" id="todoInput" placeholder="Yeni gorev ekle...">
                 <button id="addBtn">Ekle</button>
             </div>
-            <ul id="todoList"></ul>
+            <div class="input-extras">
+                <input type="datetime-local" id="dueDateInput" title="Son tarih">
+                <select id="priorityInput" title="Oncelik">
+                    <option value="1">Dusuk</option>
+                    <option value="2" selected>Orta</option>
+                    <option value="3">Yuksek</option>
+                </select>
+                <input type="text" id="tagsInput" placeholder="Etiketler (virgul ile)" title="Etiketler">
+            </div>
+
+            <h2 class="group-header">Aktif Gorevler</h2>
+            <ul id="activeTodos"></ul>
+            <h2 class="group-header">Tamamlanan Gorevler</h2>
+            <ul id="completedTodos"></ul>
         </div>
     </div>
+
+    <!-- Etiket Yonetim Modali -->
+    <div id="tagModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Etiket Yonetimi</h3>
+                <button id="closeTagModal" class="modal-close">&times;</button>
+            </div>
+            <div class="tag-form">
+                <input type="text" id="newTagName" placeholder="Etiket adi">
+                <input type="color" id="newTagColor" value="#e94560">
+                <button id="addTagBtn">Ekle</button>
+            </div>
+            <ul id="tagList"></ul>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
